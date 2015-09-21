@@ -28,10 +28,16 @@ def ircConnect():
         if(text.find(':!echo') != -1):
             echo()
 
+        if(text.find(':!ping') != -1):
+            ping()
+
 
 
 def echo():
     subprocess.call(['echo', 'hello'], shell=True)
+
+def ping():
+    subprocess.call(['ping', '127.0.0.1'])
 
 if __name__ == '__main__':
     ircConnect()
