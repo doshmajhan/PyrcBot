@@ -41,7 +41,7 @@ def ircConnect():
 
 
 def echo():
-    subprocess.call(['echo', 'hello'], shell=True)
+    subprocess.call(['echo', 'hello'])
 
 def ping():
     subprocess.call(['ping', '127.0.0.1'])
