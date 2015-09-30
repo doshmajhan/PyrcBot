@@ -1,0 +1,9 @@
+('C:\\Users\\MC\\Documents\\GitHub\\pythonbot\\dist\\adobe.exe',
+ True,
+ False,
+ None,
+ None,
+ [],
+ None,
+ False,
+ 1443575428L)
